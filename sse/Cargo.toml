@@ -1,0 +1,17 @@
+[package]
+name = "sse"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+actix-web = "4.11.0"
+actix-web-lab = "0.24.3"
+tokio.workspace = true
+tokio-stream = "0.1.17"
+serde.workspace = true
+futures-util = "0.3.31"
+async-stream = "0.3.6"
+env_logger.workspace = true
+log.workspace = true
+dotenv = { workspace = true }
+anyhow = { workspace = true }

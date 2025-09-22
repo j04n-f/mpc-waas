@@ -1,0 +1,28 @@
+[package]
+name = "participant"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+futures.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+env_logger.workspace = true
+log.workspace = true
+surf = "2.3.2"
+async-sse = "5.1.0"
+round-based = "0.4.1"
+cggmp21 = { version = "0.6.2", features = ["curve-secp256k1", "hd-wallet", "hd-slip10"] }
+rand = "0.8.0"
+sha2 = "0.10.9"
+sha3 = "0.10.8"
+thiserror.workspace = true
+generic-ec = "0.4.5"
+tonic = { workspace = true }
+proto = { path = "../proto" }
+vaultrs = "0.7.4"
+dotenv = { workspace = true }
+alloy = "1.0.34"
+alloy-rlp = { version = "0.3.12", features = ["derive"] }

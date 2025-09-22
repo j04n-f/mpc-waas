@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package mpc;
+
+service Participant {
+    rpc NewWallet (CreateWalletMessage) returns (Empty);
+
+    rpc DeleteWallet (DeleteWalletMessage) returns (Empty);
+
+    rpc SignTx (SignMessage) returns (SignatureMessage);
+}
+
+enum Chain {
+    Ethereum = 0;
+    Bitcoin = 1;
+}
+
+message CreateWalletMessage {
+    int32 wallet_id = 1;
+    Chain chain = 2;
+    bytes execution_id = 3;
+}
+
+message DeleteWalletMessage {
+    int32 wallet_id = 1;
+}
+
+message SignMessage {
+    int32 tx_id = 1;
+    int32 wallet_id = 2;
+    bytes execution_id = 3;
+    Chain chain = 4;
+    bytes data = 5;
+}
+
+message SignatureMessage {
+    bytes r = 1;
+    bytes s = 2;
+    uint32 v = 3;
+}
+
+message Empty {}

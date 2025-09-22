@@ -1,0 +1,37 @@
+[package]
+name = "app"
+edition = "2024"
+version.workspace = true
+
+[dependencies]
+actix-web = "4.11.0"
+sea-orm-migration = "1.1.16"
+sea-orm = { version = "1.1.16", features = [
+  "sqlx-postgres",
+  "runtime-tokio-native-tls",
+  "macros",
+] }
+env_logger = { workspace = true }
+log = { workspace = true }
+dotenv = { workspace = true }
+serde = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+argon2 = "0.5.3"
+uuid = { version = "1.18.1", features = ["v4", "serde"] }
+once_cell = "1.21.3"
+jsonwebtoken = "9.3.1"
+chrono = { version = "0.4.42", features = ["serde"] }
+serde_json = { workspace = true }
+validator = { version = "0.20.0", features = ["derive"] }
+futures = { workspace = true }
+actix-service = "2.0.3"
+regex = "1.11.2"
+proto = { path = "../proto" }
+tonic = { workspace = true }
+hex = "0.4"
+alloy = "1.0.34"
+alloy-rlp = { version = "0.3.12", features = ["derive"] }
+
+[dev-dependencies]
+tokio = { workspace = true }

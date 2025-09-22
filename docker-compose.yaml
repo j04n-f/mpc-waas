@@ -1,0 +1,269 @@
+services:
+  # Database
+  postgres:
+    container_name: postgres_db
+    image: postgres:latest
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: dev
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - dmz-network
+
+  vault-participant-1:
+    image: hashicorp/vault
+    container_name: vault-participant-1
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: SecureToken1
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_TOKEN: SecureToken1
+    ports:
+      - "8201:8200"
+    volumes:
+      - vault1-file:/vault/file:rw
+      - vault1-config:/vault/config:rw
+    cap_add:
+      - IPC_LOCK
+    restart: always
+    networks:
+      - network-a
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  vault-participant-2:
+    image: hashicorp/vault
+    container_name: vault-participant-2
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: SecureToken2
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_TOKEN: SecureToken2
+    ports:
+      - "8202:8200"
+    volumes:
+      - vault2-file:/vault/file:rw
+      - vault2-config:/vault/config:rw
+    cap_add:
+      - IPC_LOCK
+    restart: always
+    networks:
+      - network-b
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  vault-participant-3:
+    image: hashicorp/vault
+    container_name: vault-participant-3
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: SecureToken3
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_TOKEN: SecureToken3
+    ports:
+      - "8203:8200"
+    volumes:
+      - vault3-file:/vault/file:rw
+      - vault3-config:/vault/config:rw
+    cap_add:
+      - IPC_LOCK
+    restart: always
+    networks:
+      - network-c
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # SSE Service
+  sse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: sse
+    container_name: sse-service
+    ports:
+      - "8080:8080"
+    environment:
+      SSE_HOST: 0.0.0.0
+      SSE_PORT: 8080
+      RUST_LOG: info
+    restart: always
+    networks:
+      - dmz-network
+      - network-a
+      - network-b
+      - network-c
+
+  # Participant Services
+  participant-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: participant
+    container_name: participant-1
+    ports:
+      - "50051:50051"
+    environment:
+      SSE_HOST: sse
+      SSE_PORT: 8080
+      PARTICIPANT_HOST: 0.0.0.0
+      PARTICIPANT_PORT: 50051
+      VAULT_ADDRESS: http://vault-participant-1:8200
+      VAULT_TOKEN: SecureToken1
+      RUST_LOG: info
+      PARTICIPANT_INDEX: 0
+    depends_on:
+      - vault-participant-1
+      - sse
+    restart: always
+    networks:
+      - network-a
+      - dmz-network
+
+  participant-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: participant
+    container_name: participant-2
+    ports:
+      - "50052:50051"
+    environment:
+      SSE_HOST: sse
+      SSE_PORT: 8080
+      PARTICIPANT_HOST: 0.0.0.0
+      PARTICIPANT_PORT: 50051
+      VAULT_ADDRESS: http://vault-participant-2:8200
+      VAULT_TOKEN: SecureToken2
+      RUST_LOG: info
+      PARTICIPANT_INDEX: 1
+    depends_on:
+      - vault-participant-2
+      - sse
+    restart: always
+    networks:
+      - network-b
+      - dmz-network
+
+  participant-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: participant
+    container_name: participant-3
+    ports:
+      - "50053:50051"
+    environment:
+      SSE_HOST: sse
+      SSE_PORT: 8080
+      PARTICIPANT_HOST: 0.0.0.0
+      PARTICIPANT_PORT: 50051
+      VAULT_ADDRESS: http://vault-participant-3:8200
+      VAULT_TOKEN: SecureToken3
+      RUST_LOG: info
+      PARTICIPANT_INDEX: 2
+    depends_on:
+      - vault-participant-3
+      - sse
+    restart: always
+    networks:
+      - network-c
+      - dmz-network
+
+  # Main App Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    container_name: app-service
+    ports:
+      - "8000:8000"
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8000
+      DATABASE_URL: postgres://dev:dev@postgres:5432/dev
+      JWT_SECRET: your-super-secret-jwt-key-here
+      PARTICIPANT_1_HOST: http://participant-1:50051
+      PARTICIPANT_2_HOST: http://participant-2:50051
+      PARTICIPANT_3_HOST: http://participant-3:50051
+      PROVIDER_HOST: http://anvil
+      PROVIDER_PORT: 8545
+      RUST_LOG: info
+    depends_on:
+      - postgres
+      - participant-1
+      - participant-2
+      - participant-3
+      - anvil
+    restart: always
+    networks:
+      - dmz-network
+      - network-a
+      - network-b
+      - network-c
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry
+    container_name: anvil
+    environment:
+      ANVIL_IP_ADDR: "0.0.0.0"
+    working_dir: /anvil
+    ports:
+      - "8545:8545"
+    command: anvil --chain-id 1
+    networks:
+      - dmz-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8545 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  db-data:
+  vault1-file:
+  vault1-config:
+  vault2-file:
+  vault2-config:
+  vault3-file:
+  vault3-config:
+
+networks:
+  dmz-network:
+    driver: bridge
+    name: waas-dmz
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+  network-a:
+    driver: bridge
+    name: waas-participant-a
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+  network-b:
+    driver: bridge
+    name: waas-participant-b
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.22.0.0/24
+  network-c:
+    driver: bridge
+    name: waas-participant-c
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.23.0.0/24
